@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView, type VideoSource } from 'expo-video';
+import { catchupItem, clock, dayLabel, getGuide, type Programme } from './epg';
 import type { Channel } from './m3u';
 import { themed, useTheme } from './theme';
 
@@ -16,13 +17,16 @@ type Props = {
 const toSource = (c: Channel, url = c.url): VideoSource => ({
   uri: url,
   headers: c.headers,
-  contentType: c.kind === 'live' && url.endsWith('.ts') ? 'progressive' : 'auto',
+  contentType: /\.ts$|timeshift\.php/.test(url) ? 'progressive' : 'auto',
   metadata: { title: c.name, artist: c.group },
 });
 
 export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const [replay, setReplay] = useState<{ item: Channel; programme: Programme } | null>(null);
+  const current = replay?.item ?? channel;
+  useEffect(() => setReplay(null), [channel]);
   const player = useVideoPlayer(toSource(channel), (p) => {
     p.play();
   });
@@ -38,16 +42,16 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
       return;
     }
     usedFallback.current = false;
-    player.replaceAsync(toSource(channel)).then(() => player.play());
-  }, [channel, player]);
+    player.replaceAsync(toSource(current)).then(() => player.play());
+  }, [current, player]);
 
   // If the main URL fails, try the alternative format once (e.g. .ts instead of .m3u8).
   useEffect(() => {
-    if (status === 'error' && channel.fallbackUrl && !usedFallback.current) {
+    if (status === 'error' && current.fallbackUrl && !usedFallback.current) {
       usedFallback.current = true;
-      player.replaceAsync(toSource(channel, channel.fallbackUrl)).then(() => player.play());
+      player.replaceAsync(toSource(current, current.fallbackUrl)).then(() => player.play());
     }
-  }, [status, channel, player]);
+  }, [status, current, player]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -63,11 +67,11 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
 
   const retry = () => {
     usedFallback.current = false;
-    player.replaceAsync(toSource(channel)).then(() => player.play());
+    player.replaceAsync(toSource(current)).then(() => player.play());
     setAttempt((a) => a + 1);
   };
 
-  const showingError = status === 'error' && (usedFallback.current || !channel.fallbackUrl);
+  const showingError = status === 'error' && (usedFallback.current || !current.fallbackUrl);
 
   return (
     <View style={styles.wrap}>
@@ -75,7 +79,13 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
         <Pressable onPress={onClose} hitSlop={12}>
           <Text style={styles.back}>‹ Back</Text>
         </Pressable>
-        {channel.kind === 'live' && <Text style={styles.live}>● LIVE</Text>}
+        {replay ? (
+          <Pressable onPress={() => setReplay(null)} hitSlop={10}>
+            <Text style={styles.toLive}>● Back to live</Text>
+          </Pressable>
+        ) : (
+          channel.kind === 'live' && <Text style={styles.live}>● LIVE</Text>
+        )}
       </View>
 
       <View style={styles.videoBox}>
@@ -87,7 +97,7 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
           contentFit="contain"
           fullscreenOptions={{ enable: true, orientation: 'landscape' }}
           allowsPictureInPicture
-          startsPictureInPictureAutomatically={channel.kind === 'live'}
+          startsPictureInPictureAutomatically={current.kind === 'live'}
         />
         {status === 'loading' && <ActivityIndicator style={styles.overlay} size="large" color="#fff" />}
         {showingError && (
@@ -104,18 +114,116 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
       <View style={styles.info}>
         {channel.logo ? <Image source={{ uri: channel.logo }} style={styles.logo} resizeMode="contain" /> : null}
         <View style={{ flex: 1 }}>
-          <Text style={styles.title} numberOfLines={2}>{channel.name}</Text>
-          <Text style={styles.group} numberOfLines={1}>{channel.group}</Text>
+          <Text style={styles.title} numberOfLines={2}>{replay ? replay.programme.title : channel.name}</Text>
+          <Text style={styles.group} numberOfLines={1}>
+            {replay
+              ? `⏪ Catch-up · ${channel.name} · ${dayLabel(replay.programme.start)} ${clock(replay.programme.start)}`
+              : channel.group}
+          </Text>
         </View>
       </View>
 
-      {queue.length > 1 && (
+      {index >= 0 && queue.length > 1 && (
         <View style={styles.nav}>
           <NavButton label="‹  Previous" sub={prev?.name} disabled={!prev} onPress={() => prev && onChange(prev)} />
           <NavButton label="Next  ›" sub={next?.name} disabled={!next} onPress={() => next && onChange(next)} />
         </View>
       )}
-      <Text style={styles.tip}>Tip: rotate or tap full screen in the player for landscape.</Text>
+      {channel.streamId ? (
+        <Guide
+          channel={channel}
+          playingStart={replay?.programme.start ?? null}
+          onReplay={(p) => {
+            const item = catchupItem(channel, p);
+            if (item) setReplay({ item, programme: p });
+          }}
+          onLive={() => setReplay(null)}
+        />
+      ) : (
+        <Text style={styles.tip}>Tip: rotate or tap full screen in the player for landscape.</Text>
+      )}
+    </View>
+  );
+}
+
+const ROW = 64;
+
+/** The channel's programme guide: past (replayable), now, and upcoming. */
+function Guide({
+  channel,
+  playingStart,
+  onReplay,
+  onLive,
+}: {
+  channel: Channel;
+  playingStart: number | null;
+  onReplay: (p: Programme) => void;
+  onLive: () => void;
+}) {
+  const styles = useStyles();
+  const [items, setItems] = useState<Programme[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setItems(null);
+    setFailed(false);
+    getGuide(channel)
+      .then((all) => {
+        const t = Date.now() / 1000;
+        const from = t - Math.max(channel.archiveDays ?? 0, 0.25) * 86400;
+        if (alive) setItems(all.filter((p) => p.stop > from && p.start < t + 86400));
+      })
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [channel]);
+
+  const t = Date.now() / 1000;
+  const days = channel.archiveDays ?? 0;
+  const nowIndex = items ? items.findIndex((p) => p.start <= t && t < p.stop) : -1;
+  const canReplay = (p: Programme) => p.stop <= t && (p.hasArchive || (days > 0 && p.start > t - days * 86400));
+
+  if (failed) return <Text style={styles.guideEmpty}>The TV guide is not available right now.</Text>;
+  if (!items) return <ActivityIndicator style={{ marginTop: 24 }} />;
+  if (!items.length) return <Text style={styles.guideEmpty}>No TV guide for this channel.</Text>;
+
+  return (
+    <View style={{ flex: 1, marginTop: 14 }}>
+      <Text style={styles.guideTitle}>TV guide{days ? `  ·  ⏪ ${days}-day catch-up` : ''}</Text>
+      <FlatList
+        data={items}
+        keyExtractor={(p) => p.id + '-' + p.start}
+        getItemLayout={(_, i) => ({ length: ROW, offset: ROW * i, index: i })}
+        initialScrollIndex={Math.max(0, nowIndex - 1)}
+        renderItem={({ item: p, index: i }) => {
+          const isNow = i === nowIndex;
+          const replayable = canReplay(p);
+          const playing = playingStart === p.start;
+          const future = p.start > t;
+          return (
+            <Pressable
+              style={[styles.prog, isNow && styles.progNow, playing && styles.progPlaying]}
+              disabled={!(replayable || isNow)}
+              onPress={() => (isNow ? onLive() : onReplay(p))}
+            >
+              <View style={styles.progTime}>
+                <Text style={styles.progClock}>{clock(p.start)}</Text>
+                <Text style={styles.progDay}>{dayLabel(p.start)}</Text>
+              </View>
+              <Text style={[styles.progTitle, !isNow && !replayable && !future && { opacity: 0.45 }]} numberOfLines={2}>
+                {p.title}
+              </Text>
+              {isNow ? (
+                <Text style={styles.badgeNow}>NOW</Text>
+              ) : replayable ? (
+                <Text style={styles.badgeReplay}>{playing ? '▶ Playing' : '⏪ Replay'}</Text>
+              ) : null}
+            </Pressable>
+          );
+        }}
+      />
     </View>
   );
 }
@@ -151,4 +259,16 @@ const useStyles = themed((colors) => StyleSheet.create({
   navLabel: { color: colors.text, fontWeight: '700', fontSize: 15 },
   navSub: { color: colors.muted, fontSize: 12 },
   tip: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 18 },
+  toLive: { color: colors.accent, fontWeight: '800', fontSize: 13 },
+  guideTitle: { color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 16, marginBottom: 6 },
+  guideEmpty: { color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 24 },
+  prog: { height: ROW, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderLeftWidth: 3, borderLeftColor: 'transparent' },
+  progNow: { backgroundColor: colors.accentSoft, borderLeftColor: colors.accent },
+  progPlaying: { backgroundColor: colors.surface, borderLeftColor: colors.accent },
+  progTime: { width: 64 },
+  progClock: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  progDay: { color: colors.muted, fontSize: 10 },
+  progTitle: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
+  badgeNow: { color: colors.onAccent, backgroundColor: colors.accent, fontSize: 10, fontWeight: '900', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  badgeReplay: { color: colors.accent, fontSize: 12, fontWeight: '800' },
 }));

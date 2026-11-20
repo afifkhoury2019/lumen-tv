@@ -24,7 +24,7 @@ export function normalizeServer(input: string): string {
   return s;
 }
 
-async function api<T>(l: XtreamLogin, params: Record<string, string> = {}): Promise<T> {
+export async function api<T>(l: XtreamLogin, params: Record<string, string> = {}): Promise<T> {
   const query = Object.entries({ username: l.username, password: l.password, ...params })
     .map(([k, v]) => `${enc(k)}=${enc(v)}`)
     .join('&');
@@ -85,7 +85,14 @@ function byCategoryOrder(items: Channel[], cats: Map<string, string>): Channel[]
 
 const base = (l: XtreamLogin, type: string) => `${l.server}/${type}/${enc(l.username)}/${enc(l.password)}`;
 
-type LiveStream = { stream_id: number; name?: string; stream_icon?: string; category_id?: string | null };
+type LiveStream = {
+  stream_id: number;
+  name?: string;
+  stream_icon?: string;
+  category_id?: string | null;
+  tv_archive?: number | string;
+  tv_archive_duration?: number | string;
+};
 
 export async function getLive(l: XtreamLogin): Promise<Channel[]> {
   const [cats, streams] = await Promise.all([
@@ -100,6 +107,8 @@ export async function getLive(l: XtreamLogin): Promise<Channel[]> {
     url: `${base(l, 'live')}/${s.stream_id}.m3u8`,
     fallbackUrl: `${base(l, 'live')}/${s.stream_id}.ts`,
     kind: 'live',
+    streamId: s.stream_id,
+    archiveDays: Number(s.tv_archive) === 1 ? Number(s.tv_archive_duration) || 1 : 0,
   }));
   return byCategoryOrder(items, cats);
 }

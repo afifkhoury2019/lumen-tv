@@ -7,6 +7,7 @@ import { BrowseScreen } from './src/BrowseScreen';
 import { PlayerScreen } from './src/PlayerScreen';
 import { SeriesScreen } from './src/SeriesScreen';
 import { SetupScreen } from './src/SetupScreen';
+import { setEpgLogin } from './src/epg';
 import { loadPlaylist, loadPlaylists, type Channel } from './src/m3u';
 import {
   getFavorites,
@@ -62,7 +63,9 @@ function Main() {
       const live = await getLive(s);
       setAccount(acc);
       setLists({ ...EMPTY, live });
+      setEpgLogin(s);
     } else {
+      setEpgLogin(null);
       const all = s.more?.length ? await loadPlaylists([s.url, ...s.more]) : await loadPlaylist(s.url);
       setAccount(null);
       setLists({
@@ -125,6 +128,7 @@ function Main() {
 
   const logout = async () => {
     await saveSource(null);
+    setEpgLogin(null);
     setSource(null);
     setSavedSource(null);
     setAccount(null);

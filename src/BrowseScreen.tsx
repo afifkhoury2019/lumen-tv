@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { clock, useNowNext } from './epg';
 import type { Channel } from './m3u';
 import { themed, useTheme } from './theme';
 
@@ -158,12 +159,35 @@ function Row({ item, fav, onPress, onFav }: ItemProps) {
       )}
       <View style={{ flex: 1 }}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.muted} numberOfLines={1}>{item.group}</Text>
+        {item.streamId ? <NowLine item={item} /> : <Text style={styles.muted} numberOfLines={1}>{item.group}</Text>}
       </View>
+      {item.archiveDays ? <Text style={styles.archive}>⏪</Text> : null}
       <Pressable onPress={onFav} hitSlop={12}>
         <Text style={[styles.star, fav && { color: colors.star }]}>{fav ? '★' : '☆'}</Text>
       </Pressable>
     </Pressable>
+  );
+}
+
+/** "Now: show · 14:00–15:00" with a progress bar, from the provider's guide. */
+function NowLine({ item }: { item: Channel }) {
+  const styles = useStyles();
+  const { now, next } = useNowNext(item);
+  if (!now) {
+    return (
+      <Text style={styles.muted} numberOfLines={1}>
+        {next ? `Next ${clock(next.start)} · ${next.title}` : item.group}
+      </Text>
+    );
+  }
+  const progress = Math.min(1, Math.max(0, (Date.now() / 1000 - now.start) / (now.stop - now.start)));
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={styles.nowText} numberOfLines={1}>{now.title}</Text>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+      </View>
+    </View>
   );
 }
 
@@ -218,6 +242,10 @@ const useStyles = themed((colors) => StyleSheet.create({
   name: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 2 },
   muted: { color: colors.muted, fontSize: 12 },
   star: { color: colors.muted, fontSize: 24 },
+  archive: { color: colors.muted, fontSize: 14 },
+  nowText: { color: colors.muted, fontSize: 12 },
+  progressTrack: { height: 3, borderRadius: 2, backgroundColor: colors.surfaceAlt, overflow: 'hidden', maxWidth: 220 },
+  progressFill: { height: 3, backgroundColor: colors.accent },
   poster: {
     borderRadius: 10,
     overflow: 'hidden',

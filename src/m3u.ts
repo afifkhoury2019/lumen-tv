@@ -7,9 +7,13 @@ export type Channel = {
   logo?: string;
   group: string;
   headers?: Record<string, string>;
-  kind: 'live' | 'movie' | 'series' | 'episode';
+  kind: 'live' | 'movie' | 'series' | 'episode' | 'catchup';
   /** Xtream series id, for kind === 'series'. */
   seriesId?: string;
+  /** Xtream live stream id: enables the TV guide. */
+  streamId?: number;
+  /** How many days of catch-up (replay) the provider keeps for this channel. */
+  archiveDays?: number;
   rating?: string;
 };
 
