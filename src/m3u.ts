@@ -37,10 +37,12 @@ export function parseM3U(text: string): Channel[] {
     if (!line) continue;
     if (line.startsWith('#EXTINF')) {
       const comma = line.lastIndexOf(',');
+      // Some playlists list several groups ("Kids;Religious"): use the first one.
+      const group = attr(line, 'group-title')?.split(';')[0]?.trim();
       pending = {
         name: (comma >= 0 ? line.slice(comma + 1) : '').trim() || attr(line, 'tvg-name') || 'Untitled',
         logo: attr(line, 'tvg-logo'),
-        group: attr(line, 'group-title') || 'Other',
+        group: group && group !== 'Undefined' ? group : 'Other',
       };
       headers = {};
     } else if (line.startsWith('#EXTGRP:') && pending) {

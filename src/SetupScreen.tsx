@@ -14,6 +14,11 @@ import type { Source } from './storage';
 import { colors } from './theme';
 import { normalizeServer } from './xtream';
 
+const FREE_PLAYLISTS = [
+  { title: '🇸🇦  Arabic channels', sub: 'About 350 free Arabic channels: news, general, religious, music, sports', url: 'https://iptv-org.github.io/iptv/languages/ara.m3u' },
+  { title: '🌍  All free channels', sub: 'About 12,000 free channels from around the world', url: 'https://iptv-org.github.io/iptv/index.category.m3u' },
+];
+
 type Props = { onSubmit: (source: Source) => Promise<void>; initial?: Source | null; initialError?: string | null };
 
 export function SetupScreen({ onSubmit, initial, initialError }: Props) {
@@ -103,6 +108,31 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
         </Pressable>
         <Text style={styles.note}>🔒 Your login is saved only on this device, in encrypted storage.</Text>
+
+        <View style={styles.divider} />
+        <Text style={styles.label}>No subscription? Try free channels</Text>
+        {FREE_PLAYLISTS.map((p) => (
+          <Pressable
+            key={p.url}
+            style={[styles.free, busy && { opacity: 0.6 }]}
+            disabled={busy}
+            onPress={() => {
+              setMode('m3u');
+              setUrl(p.url);
+              setBusy(true);
+              setError(null);
+              onSubmit({ kind: 'm3u', url: p.url })
+                .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+                .finally(() => setBusy(false));
+            }}
+          >
+            <Text style={styles.freeTitle}>{p.title}</Text>
+            <Text style={styles.freeSub}>{p.sub}</Text>
+          </Pressable>
+        ))}
+        <Text style={styles.note}>
+          Free channels come from the public iptv-org project: streams that broadcasters make freely available. Some may be offline.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -149,4 +179,8 @@ const styles = StyleSheet.create({
   button: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 4 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   note: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 8 },
+  free: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 4, borderWidth: 1, borderColor: colors.border },
+  freeTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  freeSub: { color: colors.muted, fontSize: 12 },
 });
