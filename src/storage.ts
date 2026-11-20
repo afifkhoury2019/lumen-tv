@@ -1,18 +1,37 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import type { XtreamLogin } from './xtream';
 
-const PLAYLIST_KEY = 'lumen.playlistUrl';
+/** Where channels come from. Kept in encrypted storage because it can hold a password. */
+export type Source = { kind: 'm3u'; url: string } | ({ kind: 'xtream' } & XtreamLogin);
+
+const SOURCE_KEY = 'lumen.source';
 const FAVORITES_KEY = 'lumen.favorites';
+const RECENTS_KEY = 'lumen.recents';
 
-export const getPlaylistUrl = () => AsyncStorage.getItem(PLAYLIST_KEY);
-export const setPlaylistUrl = (url: string | null) =>
-  url ? AsyncStorage.setItem(PLAYLIST_KEY, url) : AsyncStorage.removeItem(PLAYLIST_KEY);
-
-export async function getFavorites(): Promise<string[]> {
+export async function getSource(): Promise<Source | null> {
   try {
-    return JSON.parse((await AsyncStorage.getItem(FAVORITES_KEY)) ?? '[]');
+    const raw = await SecureStore.getItemAsync(SOURCE_KEY);
+    return raw ? (JSON.parse(raw) as Source) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const saveSource = (s: Source | null) =>
+  s ? SecureStore.setItemAsync(SOURCE_KEY, JSON.stringify(s)) : SecureStore.deleteItemAsync(SOURCE_KEY);
+
+async function getList(key: string): Promise<string[]> {
+  try {
+    const v = JSON.parse((await AsyncStorage.getItem(key)) ?? '[]');
+    return Array.isArray(v) ? v : [];
   } catch {
     return [];
   }
 }
-export const saveFavorites = (urls: string[]) =>
-  AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(urls));
+
+// Favorites and recents store item ids only (never stream URLs), so no credentials land here.
+export const getFavorites = () => getList(FAVORITES_KEY);
+export const saveFavorites = (ids: string[]) => AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
+export const getRecents = () => getList(RECENTS_KEY);
+export const saveRecents = (ids: string[]) => AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(ids));

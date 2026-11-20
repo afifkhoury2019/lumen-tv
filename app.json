@@ -2,7 +2,7 @@
   "expo": {
     "name": "Lumen TV",
     "slug": "lumen-tv",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -29,7 +29,8 @@
           "supportsBackgroundPlayback": false,
           "supportsPictureInPicture": true
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "backgroundColor": "#0B0F17"
   }

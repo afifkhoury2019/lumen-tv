@@ -2,10 +2,14 @@
 
 A simple IPTV player for Android, built with React Native and Expo.
 
-- Load any M3U / M3U8 playlist from a link
-- Browse channels by category, with search
-- Mark favorites (saved on the device)
-- Full-screen landscape playback and picture-in-picture
+- Sign in to your IPTV subscription with **server + username + password** (Xtream Codes API), or paste an **M3U link**
+- **Live TV**, **Movies** and **Series** (with seasons and episodes), grouped by your provider's categories
+- Search, favorites and recently watched
+- Player with previous / next channel, automatic stream-format fallback, full-screen landscape and picture-in-picture
+- Account page with subscription status, expiry date and connections
+
+Your login is stored only on your device, in encrypted storage (`expo-secure-store`). It is never
+part of this repository.
 
 Lumen TV does not include any channels. Use playlists you have the right to watch.
 
