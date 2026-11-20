@@ -23,7 +23,13 @@ jobs:
           node-version: 22
 
       - name: Test Arabic streams and keep only working ones
-        run: node scripts/check-streams.mjs https://iptv-org.github.io/iptv/languages/ara.m3u playlists/arabic.m3u
+        # Arabic-language list plus iptv-org's lists for Arab countries (as suggested in iptv-org discussion #1491).
+        run: |
+          SOURCES="https://iptv-org.github.io/iptv/languages/ara.m3u"
+          for c in sa ae eg qa kw bh om jo lb sy iq ps ye ma dz tn ly sd mr; do
+            SOURCES="$SOURCES,https://iptv-org.github.io/iptv/countries/$c.m3u"
+          done
+          node scripts/check-streams.mjs "$SOURCES" playlists/arabic.m3u
 
       - name: Commit the updated playlist
         run: |

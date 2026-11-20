@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Downloads an M3U playlist, tests every stream, and writes a playlist with only the working ones.
-// Usage: node scripts/check-streams.mjs <source-url> <output-file> [--min-ratio=0.5]
+// Downloads one or more M3U playlists, tests every stream, and writes a playlist with only the working ones.
+// Usage: node scripts/check-streams.mjs <source-url[,source-url...]> <output-file> [--min-ratio=0.5]
+// Several sources are merged in order; a stream URL that appears twice is kept once.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -70,9 +71,23 @@ async function works(entry) {
   }
 }
 
-const res = await fetch(source, { headers: { 'User-Agent': UA } });
-if (!res.ok) throw new Error(`Source playlist failed: HTTP ${res.status}`);
-const list = entries(await res.text());
+const sources = source.split(',').map((s) => s.trim()).filter(Boolean);
+const list = [];
+const seen = new Set();
+for (const src of sources) {
+  const res = await fetch(src, { headers: { 'User-Agent': UA } });
+  if (!res.ok) {
+    // The first source is required; extra ones are skipped if they fail.
+    if (src === sources[0]) throw new Error(`Source playlist failed: HTTP ${res.status}`);
+    console.warn(`Skipping ${src}: HTTP ${res.status}`);
+    continue;
+  }
+  for (const e of entries(await res.text())) {
+    if (seen.has(e.url)) continue;
+    seen.add(e.url);
+    list.push(e);
+  }
+}
 
 const ok = new Array(list.length).fill(false);
 let next = 0;
@@ -98,7 +113,7 @@ if (working.length < list.length * minRatio) {
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(
   output,
-  [`#EXTM3U`, `# Working streams from ${source}`, `# Checked ${new Date().toISOString()} - ${working.length}/${list.length} working`]
+  [`#EXTM3U`, ...sources.map((s) => `# Source: ${s}`), `# Checked ${new Date().toISOString()} - ${working.length}/${list.length} working`]
     .concat(working.flatMap((e) => e.lines))
     .join('\n') + '\n',
 );
