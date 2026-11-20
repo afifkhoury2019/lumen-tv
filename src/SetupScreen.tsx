@@ -15,9 +15,19 @@ import { colors } from './theme';
 import { normalizeServer } from './xtream';
 
 const FREE_PLAYLISTS = [
-  { title: '🇸🇦  Arabic channels', sub: 'About 350 free Arabic channels: news, general, religious, music, sports', url: 'https://iptv-org.github.io/iptv/languages/ara.m3u' },
-  { title: '🌍  All free channels', sub: 'About 12,000 free channels from around the world', url: 'https://iptv-org.github.io/iptv/index.category.m3u' },
-];
+  {
+    title: '🇸🇦  Arabic channels',
+    sub: 'About 300 free Arabic channels, tested daily: broken ones are removed',
+    // Refreshed every day by .github/workflows/check-streams.yml
+    url: 'https://raw.githubusercontent.com/afifkhoury2019/lumen-tv/main/playlists/arabic.m3u',
+    fallback: 'https://iptv-org.github.io/iptv/languages/ara.m3u',
+  },
+  {
+    title: '🌍  All free channels',
+    sub: 'About 12,000 free channels from around the world (not tested)',
+    url: 'https://iptv-org.github.io/iptv/index.category.m3u',
+  },
+] as { title: string; sub: string; url: string; fallback?: string }[];
 
 type Props = { onSubmit: (source: Source) => Promise<void>; initial?: Source | null; initialError?: string | null };
 
@@ -122,6 +132,7 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
               setBusy(true);
               setError(null);
               onSubmit({ kind: 'm3u', url: p.url })
+                .catch((e) => (p.fallback ? onSubmit({ kind: 'm3u', url: p.fallback }) : Promise.reject(e)))
                 .catch((e) => setError(e instanceof Error ? e.message : String(e)))
                 .finally(() => setBusy(false));
             }}

@@ -1,0 +1,38 @@
+name: Check free streams
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # every day at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-streams
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Test Arabic streams and keep only working ones
+        run: node scripts/check-streams.mjs https://iptv-org.github.io/iptv/languages/ara.m3u playlists/arabic.m3u
+
+      - name: Commit the updated playlist
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add playlists/arabic.m3u
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Update working Arabic streams ($(grep -c '^#EXTINF' playlists/arabic.m3u) channels)"
+            git push
+          fi
