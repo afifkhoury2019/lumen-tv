@@ -17,7 +17,7 @@ import {
   saveSource,
   type Source,
 } from './src/storage';
-import { colors } from './src/theme';
+import { ThemeProvider, themed, useTheme } from './src/theme';
 import { getLive, getMovies, getSeries, login, type Account } from './src/xtream';
 
 type Tab = 'live' | 'movies' | 'series' | 'account';
@@ -30,12 +30,16 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export default function App() {
   return (
     <SafeAreaProvider>
-      <Main />
+      <ThemeProvider>
+        <Main />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
 function Main() {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [booting, setBooting] = useState(true);
   const [source, setSource] = useState<Source | null>(null);
@@ -230,7 +234,7 @@ function Main() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   tabBar: {
     flexDirection: 'row',
@@ -242,4 +246,4 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: 'center', gap: 2 },
   tabIcon: { fontSize: 20 },
   tabLabel: { color: colors.muted, fontSize: 11, fontWeight: '700' },
-});
+}));

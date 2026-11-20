@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Image, Pressable, StyleSheet, Text, Vie
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView, type VideoSource } from 'expo-video';
 import type { Channel } from './m3u';
-import { colors } from './theme';
+import { themed, useTheme } from './theme';
 
 type Props = {
   channel: Channel;
@@ -21,6 +21,8 @@ const toSource = (c: Channel, url = c.url): VideoSource => ({
 });
 
 export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const player = useVideoPlayer(toSource(channel), (p) => {
     p.play();
   });
@@ -93,7 +95,7 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
             <Text style={styles.err}>Can't play this right now.</Text>
             {error?.message ? <Text style={styles.errDetail} numberOfLines={3}>{error.message}</Text> : null}
             <Pressable style={styles.retry} onPress={retry}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>Try again</Text>
+              <Text style={{ color: colors.onAccent, fontWeight: '700' }}>Try again</Text>
             </Pressable>
           </View>
         )}
@@ -119,6 +121,8 @@ export function PlayerScreen({ channel, queue, onChange, onClose }: Props) {
 }
 
 function NavButton({ label, sub, disabled, onPress }: { label: string; sub?: string; disabled: boolean; onPress: () => void }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   return (
     <Pressable style={[styles.navBtn, disabled && { opacity: 0.35 }]} disabled={disabled} onPress={onPress}>
       <Text style={styles.navLabel}>{label}</Text>
@@ -127,7 +131,7 @@ function NavButton({ label, sub, disabled, onPress }: { label: string; sub?: str
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((colors) => StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   back: { color: colors.accent, fontSize: 17, fontWeight: '600' },
@@ -147,4 +151,4 @@ const styles = StyleSheet.create({
   navLabel: { color: colors.text, fontWeight: '700', fontSize: 15 },
   navSub: { color: colors.muted, fontSize: 12 },
   tip: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 18 },
-});
+}));

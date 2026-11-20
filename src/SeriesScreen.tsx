@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, BackHandler, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Channel } from './m3u';
-import { colors } from './theme';
+import { themed, useTheme } from './theme';
 import { getEpisodes, type Season, type XtreamLogin } from './xtream';
 
 type Props = { login: XtreamLogin; series: Channel; onBack: () => void; onPlay: (ep: Channel, season: Channel[]) => void };
 
 export function SeriesScreen({ login, series, onBack, onPlay }: Props) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const [seasons, setSeasons] = useState<Season[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState(0);
@@ -57,7 +59,7 @@ export function SeriesScreen({ login, series, onBack, onPlay }: Props) {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               {seasons.map((s, i) => (
                 <Pressable key={s.season} onPress={() => setActive(i)} style={[styles.chip, i === active && styles.chipOn]}>
-                  <Text style={[styles.chipText, i === active && { color: '#fff' }]}>Season {s.season}</Text>
+                  <Text style={[styles.chipText, i === active && { color: colors.onAccent }]}>Season {s.season}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -79,7 +81,7 @@ export function SeriesScreen({ login, series, onBack, onPlay }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((colors) => StyleSheet.create({
   top: { padding: 16, paddingBottom: 4 },
   back: { color: colors.accent, fontSize: 17, fontWeight: '600' },
   hero: { flexDirection: 'row', gap: 16, padding: 16 },
@@ -95,4 +97,4 @@ const styles = StyleSheet.create({
   num: { color: colors.muted, width: 24, fontWeight: '700' },
   epName: { color: colors.text, flex: 1, fontSize: 15, fontWeight: '600' },
   play: { color: colors.accent, fontSize: 16 },
-});
+}));

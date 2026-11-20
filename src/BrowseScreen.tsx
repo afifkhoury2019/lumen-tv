@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import type { Channel } from './m3u';
-import { colors } from './theme';
+import { themed, useTheme } from './theme';
 
 const ALL = 'All';
 const FAVORITES = '★ Favorites';
@@ -43,6 +43,8 @@ export function BrowseScreen({
   onRefresh,
   refreshing,
 }: Props) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const [group, setGroup] = useState(ALL);
   const [query, setQuery] = useState('');
   const { width } = useWindowDimensions();
@@ -101,7 +103,7 @@ export function BrowseScreen({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {groups.map((g) => (
             <Pressable key={g} onPress={() => setGroup(g)} style={[styles.chip, g === group && styles.chipOn]}>
-              <Text style={[styles.chipText, g === group && { color: '#fff' }]} numberOfLines={1}>
+              <Text style={[styles.chipText, g === group && { color: colors.onAccent }]} numberOfLines={1}>
                 {g}
               </Text>
             </Pressable>
@@ -143,6 +145,8 @@ export function BrowseScreen({
 type ItemProps = { item: Channel; fav: boolean; onPress: () => void; onFav: () => void };
 
 function Row({ item, fav, onPress, onFav }: ItemProps) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surface }]} onPress={onPress}>
       {item.logo ? (
@@ -164,6 +168,8 @@ function Row({ item, fav, onPress, onFav }: ItemProps) {
 }
 
 function Poster({ item, width, fav, onPress, onFav }: ItemProps & { width: number }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   return (
     <Pressable style={{ width }} onPress={onPress}>
       <View style={[styles.poster, { width, height: width * 1.5 }]}>
@@ -186,7 +192,7 @@ function Poster({ item, width, fav, onPress, onFav }: ItemProps & { width: numbe
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((colors) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   header: { flexDirection: 'row', alignItems: 'baseline', gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 },
   title: { color: colors.text, fontSize: 28, fontWeight: '800' },
@@ -224,4 +230,4 @@ const styles = StyleSheet.create({
   rating: { position: 'absolute', left: 6, bottom: 6, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   ratingText: { color: colors.star, fontSize: 11, fontWeight: '800' },
   posterName: { color: colors.text, fontSize: 12, fontWeight: '600', marginTop: 6 },
-});
+}));

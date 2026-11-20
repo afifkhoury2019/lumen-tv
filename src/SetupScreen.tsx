@@ -11,7 +11,8 @@ import {
   View,
 } from 'react-native';
 import type { Source } from './storage';
-import { colors } from './theme';
+import { Logo } from './Logo';
+import { themed, useTheme } from './theme';
 import { normalizeServer } from './xtream';
 
 // Free-TV/IPTV asks players to load its playlists straight from GitHub, so we link, not copy.
@@ -46,6 +47,8 @@ const FREE_PLAYLISTS: FreePlaylist[] = [
 type Props = { onSubmit: (source: Source) => Promise<void>; initial?: Source | null; initialError?: string | null };
 
 export function SetupScreen({ onSubmit, initial, initialError }: Props) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const [mode, setMode] = useState<'xtream' | 'm3u'>(initial?.kind ?? 'xtream');
   const [server, setServer] = useState(initial?.kind === 'xtream' ? initial.server : '');
   const [username, setUsername] = useState(initial?.kind === 'xtream' ? initial.username : '');
@@ -84,13 +87,13 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>Lumen TV</Text>
+        <Logo size={38} />
         <Text style={styles.sub}>Sign in with your IPTV subscription.</Text>
 
         <View style={styles.segment}>
           {(['xtream', 'm3u'] as const).map((m) => (
             <Pressable key={m} style={[styles.segItem, mode === m && styles.segOn]} onPress={() => setMode(m)}>
-              <Text style={[styles.segText, mode === m && { color: '#fff' }]}>
+              <Text style={[styles.segText, mode === m && { color: colors.onAccent }]}>
                 {m === 'xtream' ? 'Username & password' : 'M3U link'}
               </Text>
             </Pressable>
@@ -129,7 +132,7 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
 
         {error && <Text style={styles.error}>{error}</Text>}
         <Pressable style={[styles.button, busy && { opacity: 0.6 }]} onPress={submit} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign in</Text>}
+          {busy ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buttonText}>Sign in</Text>}
         </Pressable>
         <Text style={styles.note}>🔒 Your login is saved only on this device, in encrypted storage.</Text>
 
@@ -164,6 +167,8 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
 }
 
 function Field({ label, ...props }: { label: string } & React.ComponentProps<typeof TextInput>) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.label}>{label}</Text>
@@ -178,7 +183,7 @@ function Field({ label, ...props }: { label: string } & React.ComponentProps<typ
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = themed((colors) => StyleSheet.create({
   wrap: { flexGrow: 1, justifyContent: 'center', padding: 24, gap: 14 },
   logo: { color: colors.text, fontSize: 36, fontWeight: '800' },
   sub: { color: colors.muted, fontSize: 16, marginBottom: 4 },
@@ -202,10 +207,10 @@ const styles = StyleSheet.create({
   hint: { color: colors.muted, fontSize: 12 },
   error: { color: colors.danger },
   button: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 4 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonText: { color: colors.onAccent, fontSize: 16, fontWeight: '700' },
   note: { color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 8 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 8 },
   free: { backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 4, borderWidth: 1, borderColor: colors.border },
   freeTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
   freeSub: { color: colors.muted, fontSize: 12 },
-});
+}));

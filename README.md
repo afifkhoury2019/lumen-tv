@@ -7,6 +7,7 @@ A simple IPTV player for Android, built with React Native and Expo.
 - Search, favorites and recently watched
 - Player with previous / next channel, automatic stream-format fallback, full-screen landscape and picture-in-picture
 - Account page with subscription status, expiry date and connections
+- Theme picker: Lumen Red (brand, red & black) plus Ocean Blue, Royal Purple, Emerald and Black Gold
 
 - One-tap **free channels** (no subscription needed):
   - Arabic: about 360 channels from [iptv-org](https://github.com/iptv-org/iptv) (re-tested daily by
