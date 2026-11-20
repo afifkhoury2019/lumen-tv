@@ -3,7 +3,9 @@ import * as SecureStore from 'expo-secure-store';
 import type { XtreamLogin } from './xtream';
 
 /** Where channels come from. Kept in encrypted storage because it can hold a password. */
-export type Source = { kind: 'm3u'; url: string } | ({ kind: 'xtream' } & XtreamLogin);
+export type Source =
+  | { kind: 'm3u'; url: string; /** extra playlists merged in */ more?: string[] }
+  | ({ kind: 'xtream' } & XtreamLogin);
 
 const SOURCE_KEY = 'lumen.source';
 const FAVORITES_KEY = 'lumen.favorites';

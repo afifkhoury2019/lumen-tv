@@ -72,6 +72,26 @@ export function parseM3U(text: string): Channel[] {
   return channels;
 }
 
+/** Loads several playlists and merges them, skipping duplicate streams. Fails only if all fail. */
+export async function loadPlaylists(urls: string[]): Promise<Channel[]> {
+  const results = await Promise.allSettled(urls.map(loadPlaylist));
+  const seen = new Set<string>();
+  const merged: Channel[] = [];
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    for (const c of r.value) {
+      if (seen.has(c.url)) continue;
+      seen.add(c.url);
+      merged.push(c);
+    }
+  }
+  if (!merged.length) {
+    const first = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    throw first?.reason ?? new Error('No channels found.');
+  }
+  return merged;
+}
+
 export async function loadPlaylist(url: string): Promise<Channel[]> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Playlist request failed (${res.status})`);

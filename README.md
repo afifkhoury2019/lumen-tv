@@ -8,6 +8,13 @@ A simple IPTV player for Android, built with React Native and Expo.
 - Player with previous / next channel, automatic stream-format fallback, full-screen landscape and picture-in-picture
 - Account page with subscription status, expiry date and connections
 
+- One-tap **free channels** (no subscription needed):
+  - Arabic: about 360 channels from [iptv-org](https://github.com/iptv-org/iptv) (re-tested daily by
+    `.github/workflows/check-streams.yml`; only working streams are kept in `playlists/arabic.m3u`)
+    plus the Arabic lists of [Free-TV/IPTV](https://github.com/Free-TV/IPTV)
+  - Free-TV worldwide: about 2,200 channels, loaded straight from the Free-TV repository
+  - iptv-org worldwide: about 12,000 channels
+
 Your login is stored only on your device, in encrypted storage (`expo-secure-store`). It is never
 part of this repository.
 

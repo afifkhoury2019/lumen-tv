@@ -7,7 +7,7 @@ import { BrowseScreen } from './src/BrowseScreen';
 import { PlayerScreen } from './src/PlayerScreen';
 import { SeriesScreen } from './src/SeriesScreen';
 import { SetupScreen } from './src/SetupScreen';
-import { loadPlaylist, type Channel } from './src/m3u';
+import { loadPlaylist, loadPlaylists, type Channel } from './src/m3u';
 import {
   getFavorites,
   getRecents,
@@ -59,7 +59,7 @@ function Main() {
       setAccount(acc);
       setLists({ ...EMPTY, live });
     } else {
-      const all = await loadPlaylist(s.url);
+      const all = s.more?.length ? await loadPlaylists([s.url, ...s.more]) : await loadPlaylist(s.url);
       setAccount(null);
       setLists({
         live: all.filter((c) => c.kind === 'live'),

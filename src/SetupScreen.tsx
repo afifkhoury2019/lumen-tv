@@ -14,20 +14,34 @@ import type { Source } from './storage';
 import { colors } from './theme';
 import { normalizeServer } from './xtream';
 
-const FREE_PLAYLISTS = [
+// Free-TV/IPTV asks players to load its playlists straight from GitHub, so we link, not copy.
+const FREE_TV = 'https://raw.githubusercontent.com/Free-TV/IPTV/master';
+const FREE_TV_ARABIC = [
+  'saudi_arabia', 'united_arab_emirates', 'egypt', 'lebanon', 'qatar', 'iraq', 'zz_news_ar', 'zz_documentaries_ar',
+].map((c) => `${FREE_TV}/playlists/playlist_${c}.m3u8`);
+
+type FreePlaylist = { title: string; sub: string; url: string; more?: string[]; fallback?: string };
+
+const FREE_PLAYLISTS: FreePlaylist[] = [
   {
     title: '🇸🇦  Arabic channels',
-    sub: 'About 300 free Arabic channels, tested daily: broken ones are removed',
+    sub: 'About 360 free Arabic channels from iptv-org (tested daily) and Free-TV',
     // Refreshed every day by .github/workflows/check-streams.yml
     url: 'https://raw.githubusercontent.com/afifkhoury2019/lumen-tv/main/playlists/arabic.m3u',
+    more: FREE_TV_ARABIC,
     fallback: 'https://iptv-org.github.io/iptv/languages/ara.m3u',
   },
   {
-    title: '🌍  All free channels',
+    title: '📡  Free-TV channels',
+    sub: 'About 2,200 free channels worldwide from the Free-TV project',
+    url: `${FREE_TV}/playlist.m3u8`,
+  },
+  {
+    title: '🌍  All iptv-org channels',
     sub: 'About 12,000 free channels from around the world (not tested)',
     url: 'https://iptv-org.github.io/iptv/index.category.m3u',
   },
-] as { title: string; sub: string; url: string; fallback?: string }[];
+];
 
 type Props = { onSubmit: (source: Source) => Promise<void>; initial?: Source | null; initialError?: string | null };
 
@@ -131,8 +145,8 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
               setUrl(p.url);
               setBusy(true);
               setError(null);
-              onSubmit({ kind: 'm3u', url: p.url })
-                .catch((e) => (p.fallback ? onSubmit({ kind: 'm3u', url: p.fallback }) : Promise.reject(e)))
+              onSubmit({ kind: 'm3u', url: p.url, more: p.more })
+                .catch((e) => (p.fallback ? onSubmit({ kind: 'm3u', url: p.fallback, more: p.more }) : Promise.reject(e)))
                 .catch((e) => setError(e instanceof Error ? e.message : String(e)))
                 .finally(() => setBusy(false));
             }}
@@ -142,7 +156,7 @@ export function SetupScreen({ onSubmit, initial, initialError }: Props) {
           </Pressable>
         ))}
         <Text style={styles.note}>
-          Free channels come from the public iptv-org project: streams that broadcasters make freely available. Some may be offline.
+          Free channels come from the public iptv-org and Free-TV projects: streams that broadcasters make freely available. Some may be offline or blocked in your country.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
